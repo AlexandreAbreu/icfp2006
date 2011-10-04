@@ -1,35 +1,41 @@
+// icfp.cpp : Defines the entry point for the console application.
+//
+
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "uc.h"
+#include "um.h"
 
-struct uc uc_machine;
+um_t u_machine;
 
 int main (int argc, char ** argv)
 {
-  FILE * f = fopen ("./data/codex.umz", "rb");
-  if ( ! f)
-    {
-      return 1;
+	FILE * f = fopen ("E:\\Tools\\misc\\icfp\\icfp\\data\\sandmark.umz", "rb");
+	if ( ! f)
+	{
+        return 1;
     }
-  
-  {
-    size_t fs = 0;
-    byte * content = NULL;
     
-    fseek (f, 0, SEEK_END);
-    fs = ftell (f);
-    fseek (f, 0, SEEK_SET);
+    {
+        size_t fs = 0;
+        byte * content = NULL;
+
+		fseek (f, 0, SEEK_END);
+		fs = ftell (f);
+		fseek (f, 0, SEEK_SET);
+        
+        content = (byte *) malloc (fs);
+        if (NULL != content)
+        {
+            if (fs == fread (content, 1, fs, f))
+            {
+                um_run (&u_machine, content, fs);
+            }
+        }
+        
+        free (content);
+	}
     
-    content = (byte *) malloc (fs);
-    if (NULL != content)
-      {
-	uc_run (&uc_machine, content, fs);
-      }
-    
-    free (content);
-  }
-    
-  return 0;
+    return 0;
 }
 
