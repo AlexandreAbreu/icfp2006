@@ -10,32 +10,32 @@ um_t u_machine;
 
 int main (int argc, char ** argv)
 {
-	FILE * f = fopen ("E:\\Tools\\misc\\icfp\\icfp\\data\\sandmark.umz", "rb");
-	if ( ! f)
-	{
-        return 1;
+  FILE * f = fopen ("E:\\Tools\\misc\\icfp\\icfp\\data\\sandmark.umz", "rb");
+  if ( ! f)
+    {
+      return 1;
     }
     
-    {
-        size_t fs = 0;
-        byte * content = NULL;
+  {
+    size_t fs = 0;
+    byte * content = NULL;
 
-		fseek (f, 0, SEEK_END);
-		fs = ftell (f);
-		fseek (f, 0, SEEK_SET);
+    fseek (f, 0, SEEK_END);
+    fs = ftell (f);
+    fseek (f, 0, SEEK_SET);
         
-        content = (byte *) malloc (fs);
-        if (NULL != content)
-        {
-            if (fs == fread (content, 1, fs, f))
-            {
-                um_run (&u_machine, content, fs);
-            }
-        }
+    content = (byte *) malloc (fs);
+    if (NULL != content)
+      {
+	if (fs == fread (content, 1, fs, f))
+	  {
+	    um_run (&u_machine, content, fs);
+	  }
+      }
         
-        free (content);
-	}
+    free (content);
+  }
     
-    return 0;
+  return 0;
 }
 

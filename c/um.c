@@ -42,8 +42,8 @@ static ArrayCell * um_priv_add_array_cell (struct um_t * machine, ArrayCell * p)
 static platter_t um_priv_read_platter_from (struct um_t * machine, address_t a);
 static int um_priv_initialize_machine (struct um_t * machine);
 static int um_priv_initialize_program_array_with (struct um_t * machine
-						                          , byte * data
-						                          , size_t size);
+						  , byte * data
+						  , size_t size);
 static byte decode_register_value_from_platter (platter_t p, Register r);
 static void fail (struct um_t * machine);
 static int um_priv_do_spin (struct um_t * machine);
@@ -104,7 +104,7 @@ struct Operator
   
 } g_operators [] = {
 #if 0
-    [OP_COND_MOVE] = { .code = OP_COND_MOVE, .handler = um_priv_handler_cond_mov },
+  [OP_COND_MOVE] = { .code = OP_COND_MOVE, .handler = um_priv_handler_cond_mov },
   [OP_ARRAY_INDEX] = { .code = OP_ARRAY_INDEX, .handler = um_priv_handler_array_idx },
   [OP_ARRAY_AMEND] = { .code = OP_ARRAY_AMEND, .handler = um_priv_handler_array_amend },
   [OP_ADDITION] = { .code = OP_ADDITION, .handler = um_priv_handler_addition },
@@ -241,29 +241,29 @@ static platter_t um_priv_read_platter_from (struct um_t * machine
 {
 #define VALIDATE_ADDRESS(address,array) if ((address) >= (array)->datasize) fail(machine)
     
-    platter_t valueAt = 0;
+  platter_t valueAt = 0;
 
-    // TODO validate address
-    ArrayCell *
-        cell = um_priv_search_for_cell_id (machine, UM_PROGRAM_ARRAY_ID);
-    if (NULL == cell)
+  // TODO validate address
+  ArrayCell *
+    cell = um_priv_search_for_cell_id (machine, UM_PROGRAM_ARRAY_ID);
+  if (NULL == cell)
     {
-        fail (machine);
+      fail (machine);
     }
     
-    VALIDATE_ADDRESS (a, cell);
+  VALIDATE_ADDRESS (a, cell);
     
-    {
-        // assume little endian acrhitecture
-        platter_t v = cell->data[a];
+  {
+    // assume little endian acrhitecture
+    platter_t v = cell->data[a];
         
-        valueAt |= (v & 0xFF) << 24;
-        valueAt |= (v & 0xFF00) << 8;
-        valueAt |= (v & 0xFF0000) >> 8;
-        valueAt |= (v & 0xFF000000) >> 24;
-    }
+    valueAt |= (v & 0xFF) << 24;
+    valueAt |= (v & 0xFF00) << 8;
+    valueAt |= (v & 0xFF0000) >> 8;
+    valueAt |= (v & 0xFF000000) >> 24;
+  }
     
-    return valueAt;
+  return valueAt;
 }
 
 static int um_priv_initialize_machine (struct um_t * machine)
@@ -327,7 +327,7 @@ static byte decode_register_value_from_platter (platter_t p, Register r)
 
 static void fail (struct um_t * machine)
 {
-    assert(0);
+  assert(0);
   fprintf (stderr, "fail: invalid operation\n");
   exit (1);
 }
@@ -339,34 +339,34 @@ static int um_priv_do_spin (struct um_t * machine)
 {
 #define VALIDATE_OPCODE(opcode) if (opcode >= (sizeof(g_operators) / sizeof(g_operators[0]))) fail (machine)
   
-      if ( ! setjmp (jmp_env))
-	{
+  if ( ! setjmp (jmp_env))
+    {
       while (1)
         {
-	      platter_t op = um_priv_read_platter_from (machine, machine->ip++);
+	  platter_t op = um_priv_read_platter_from (machine, machine->ip++);
     	  
-	      VALIDATE_OPCODE ( OPCODE_FROM_PLATTER(op));
+	  VALIDATE_OPCODE ( OPCODE_FROM_PLATTER(op));
     	  
-	      assert (g_operators [OPCODE_FROM_PLATTER (op)].code == OPCODE_FROM_PLATTER(op));
+	  assert (g_operators [OPCODE_FROM_PLATTER (op)].code == OPCODE_FROM_PLATTER(op));
     	  
           {
-              byte rega = decode_register_value_from_platter (op, REGISTER_A);
-              byte regb = decode_register_value_from_platter (op, REGISTER_B);
-              byte regc = decode_register_value_from_platter (op, REGISTER_C);
+	    byte rega = decode_register_value_from_platter (op, REGISTER_A);
+	    byte regb = decode_register_value_from_platter (op, REGISTER_B);
+	    byte regc = decode_register_value_from_platter (op, REGISTER_C);
             
-	          g_operators [OPCODE_FROM_PLATTER (op)].handler (machine
-							          , op
-							          , rega
-							          , regb
-							          , regc
-							          );
+	    g_operators [OPCODE_FROM_PLATTER (op)].handler (machine
+							    , op
+							    , rega
+							    , regb
+							    , regc
+							    );
           }
-      }
-      }
-      else
-	{
-	  printf ("Processor halted\n");
 	}
+    }
+  else
+    {
+      printf ("Processor halted\n");
+    }
   
 #undef VALIDATE_OPCODE
 
@@ -570,11 +570,11 @@ static int um_priv_handler_abandonment (struct um_t * machine
 }
 
 static int um_priv_handler_output (struct um_t * machine
-				    , platter_t p
-				    , byte rega
-				    , byte regb
-				    , byte regc
-				    )
+				   , platter_t p
+				   , byte rega
+				   , byte regb
+				   , byte regc
+				   )
 {
   VALIDATE_REGISTERS (um_priv_handler_output);
   
@@ -591,11 +591,11 @@ static int um_priv_handler_output (struct um_t * machine
 }
 
 static int um_priv_handler_input (struct um_t * machine
-				    , platter_t p
-				    , byte rega
-				    , byte regb
-				    , byte regc
-				    )
+				  , platter_t p
+				  , byte rega
+				  , byte regb
+				  , byte regc
+				  )
 {
   VALIDATE_REGISTERS (um_priv_handler_input);
   
@@ -624,31 +624,31 @@ static int um_priv_handler_load_program (struct um_t * machine
   VALIDATE_REGISTERS (um_priv_handler_load_program);
   
   if (UM_PROGRAM_ARRAY_ID != machine->registers[regb])
-  {
-    ArrayCell *
-      cell = um_priv_search_for_cell_id (machine, machine->registers[regb]);
-    
-    if (NULL == cell)
-      {
-	fail (machine);
-      }
-    
     {
+      ArrayCell *
+	cell = um_priv_search_for_cell_id (machine, machine->registers[regb]);
+    
+      if (NULL == cell)
+	{
+	  fail (machine);
+	}
+    
+      {
         ArrayCell *
           newcell = um_priv_new_array_cell_from_cell (cell);
         
         ArrayCell * zeroc = um_priv_search_for_cell_id (machine, UM_PROGRAM_ARRAY_ID);
         if (NULL != zeroc)
-	    {
-	      um_priv_delete_array (zeroc);
-	    }
+	  {
+	    um_priv_delete_array (zeroc);
+	  }
+      }
     }
-  }
   
-    {
-      platter_t offset = machine->registers[regc];
-      machine->ip = offset;
-    }
+  {
+    platter_t offset = machine->registers[regc];
+    machine->ip = offset;
+  }
 
   return EOK;
 }
@@ -677,7 +677,7 @@ static int um_priv_handler_orthography (struct um_t * machine
   // correct register a
   rega = (p >> 25) & 0x07;
   
-//  printf ("um_priv_handler_orthography ip: %d, rega: %d, value: %d\n", machine->ip, rega, value);
+  //  printf ("um_priv_handler_orthography ip: %d, rega: %d, value: %d\n", machine->ip, rega, value);
 
   machine->registers[rega] = value;
   

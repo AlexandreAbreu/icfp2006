@@ -12,11 +12,11 @@ typedef platter_t address_t;
  * 
  */
 typedef enum UM_CONSTANTS
-{
+  {
     UM_REGISTER_COUNT   = 8,
     UM_PROGRAM_ARRAY_ID = 0,
 
-} UM_CONSTANTS;
+  } UM_CONSTANTS;
 
 
 /**
@@ -25,13 +25,13 @@ typedef enum UM_CONSTANTS
  */
 typedef struct um_t
 {
-    // registers
-    platter_t registers[UM_REGISTER_COUNT];
+  // registers
+  platter_t registers[UM_REGISTER_COUNT];
 
-    // basic runtime structures
-    address_t ip;
+  // basic runtime structures
+  address_t ip;
     
-    void * arrays;
+  void * arrays;
 
 } um_t;
 
