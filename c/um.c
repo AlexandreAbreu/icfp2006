@@ -103,7 +103,6 @@ struct Operator
   op_handler      handler;
   
 } g_operators [] = {
-#if 0
   [OP_COND_MOVE] = { .code = OP_COND_MOVE, .handler = um_priv_handler_cond_mov },
   [OP_ARRAY_INDEX] = { .code = OP_ARRAY_INDEX, .handler = um_priv_handler_array_idx },
   [OP_ARRAY_AMEND] = { .code = OP_ARRAY_AMEND, .handler = um_priv_handler_array_amend },
@@ -120,8 +119,9 @@ struct Operator
   [OP_LOAD_PROGRAM] = { .code = OP_LOAD_PROGRAM, .handler = um_priv_handler_load_program },
 
   [OP_ORTHOGRAPHY] = { .code = OP_ORTHOGRAPHY, .handler = um_priv_handler_orthography },
-#endif
 
+
+#if 0
   { OP_COND_MOVE, um_priv_handler_cond_mov },
   { OP_ARRAY_INDEX, um_priv_handler_array_idx },
   { OP_ARRAY_AMEND, um_priv_handler_array_amend },
@@ -138,6 +138,7 @@ struct Operator
   { OP_LOAD_PROGRAM, um_priv_handler_load_program },
 
   { OP_ORTHOGRAPHY, um_priv_handler_orthography },
+#endif
 };
 
 
