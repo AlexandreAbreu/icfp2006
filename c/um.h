@@ -41,7 +41,7 @@ typedef struct um_t
  *
  */
 int um_run (struct um_t *, byte *, size_t);
-
+int um_run_one_step (struct um_t *, byte *, size_t);
 
 #endif // UC_H
 

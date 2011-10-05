@@ -336,32 +336,41 @@ static void fail (struct um_t * machine)
 #include <setjmp.h>
 static jmp_buf jmp_env;
 
-static int um_priv_do_spin (struct um_t * machine)
+static int um_priv_do_one_spin (struct um_t * machine)
 {
 #define VALIDATE_OPCODE(opcode) if (opcode >= (sizeof(g_operators) / sizeof(g_operators[0]))) fail (machine)
   
+  platter_t op = um_priv_read_platter_from (machine, machine->ip++);
+  
+  VALIDATE_OPCODE ( OPCODE_FROM_PLATTER(op));
+  
+  assert (g_operators [OPCODE_FROM_PLATTER (op)].code == OPCODE_FROM_PLATTER(op));
+  
+  {
+    byte rega = decode_register_value_from_platter (op, REGISTER_A);
+    byte regb = decode_register_value_from_platter (op, REGISTER_B);
+    byte regc = decode_register_value_from_platter (op, REGISTER_C);
+    
+    g_operators [OPCODE_FROM_PLATTER (op)].handler (machine
+						    , op
+						    , rega
+						    , regb
+						    , regc
+						    );
+  }
+  
+#undef VALIDATE_OPCODE
+  
+  return EOK;
+}
+
+static int um_priv_do_spin (struct um_t * machine)
+{
   if ( ! setjmp (jmp_env))
     {
       while (1)
         {
-	  platter_t op = um_priv_read_platter_from (machine, machine->ip++);
-    	  
-	  VALIDATE_OPCODE ( OPCODE_FROM_PLATTER(op));
-    	  
-	  assert (g_operators [OPCODE_FROM_PLATTER (op)].code == OPCODE_FROM_PLATTER(op));
-    	  
-          {
-	    byte rega = decode_register_value_from_platter (op, REGISTER_A);
-	    byte regb = decode_register_value_from_platter (op, REGISTER_B);
-	    byte regc = decode_register_value_from_platter (op, REGISTER_C);
-            
-	    g_operators [OPCODE_FROM_PLATTER (op)].handler (machine
-							    , op
-							    , rega
-							    , regb
-							    , regc
-							    );
-          }
+	  um_priv_do_one_spin (machine);
 	}
     }
   else
@@ -369,8 +378,6 @@ static int um_priv_do_spin (struct um_t * machine)
       printf ("Processor halted\n");
     }
   
-#undef VALIDATE_OPCODE
-
   return EOK;
 }
 
@@ -702,3 +709,15 @@ int um_run (struct um_t * machine, byte * codex, size_t codex_size)
   
   return um_priv_do_spin (machine);
 }
+
+int um_run_one_step (struct um_t * machine, byte * codex, size_t codex_size)
+{
+  if ( ! machine->arrays)
+    {
+      um_priv_initialize_machine (machine);
+      um_priv_initialize_program_array_with (machine, codex, codex_size);
+    }
+  
+  return um_priv_do_one_spin (machine);
+}
+
