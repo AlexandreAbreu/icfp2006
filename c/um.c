@@ -48,6 +48,10 @@ static byte decode_register_value_from_platter (platter_t p, Register r);
 static void fail (struct um_t * machine);
 static int um_priv_do_spin (struct um_t * machine);
 
+static int um_priv_do_one_spin (struct um_t * machine
+				, on_run_one_step_func f
+				);
+
 
 /////////////////////////
 // operators / handlers
@@ -73,22 +77,207 @@ typedef enum OperatorCodes
   } OperatorCodes;
 
 static int um_priv_handler_cond_mov  (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
+static void um_priv_pp_cond_mov (char * out
+				 , size_t outsize
+				 , struct um_t * machine
+				 , pp_opcode_data_t d)
+{
+  snprintf (out
+	    , outsize
+	    , "IF 0x%08X THEN REG[0x%02X] = REG[0x%02X] (0x%08X)"
+	    , machine->registers[d.regc]
+	    , d.rega
+	    , d.regb
+	    , machine->registers[d.regb]);
+}
+
+
 static int um_priv_handler_array_idx (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
+static void um_priv_pp_array_idx (char * out
+				  , size_t outsize
+				  , struct um_t * machine
+				  , pp_opcode_data_t d)
+{
+  snprintf (out
+	    , outsize
+	    , "REG[0x%02X] = ARRAY[0x%08X][0x%08X]"
+	    , d.rega
+	    , machine->registers[d.regb]
+	    , machine->registers[d.regc]);
+}
+
+
 static int um_priv_handler_array_amend (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
+static void um_priv_pp_array_amend (char * out
+				    , size_t outsize
+				    , struct um_t * machine
+				    , pp_opcode_data_t d)
+{
+  snprintf (out
+	    , outsize
+	    , "ARRAY[0x%08X][0x%08X] = REG[0x%02X] (0x%08X)"
+	    , machine->registers[d.rega]
+	    , machine->registers[d.regb]
+	    , d.regc
+	    , machine->registers[d.regc]);
+}
+
 
 static int um_priv_handler_addition (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
+static void um_priv_pp_addition (char * out
+				 , size_t outsize
+				 , struct um_t * machine
+				 , pp_opcode_data_t d)
+{
+  snprintf (out
+	    , outsize
+	    , "REG[0x%02X] = 0x%08X + 0x%08X"
+	    , d.rega
+	    , machine->registers[d.regb]
+	    , machine->registers[d.regc]);
+}
+
+
 static int um_priv_handler_multiplication (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
+static void um_priv_pp_multiplication (char * out
+				       , size_t outsize
+				       , struct um_t * machine
+				       , pp_opcode_data_t d)
+{
+  snprintf (out
+	    , outsize
+	    , "REG[0x%02X] = 0x%08X * 0x%08X"
+	    , d.rega
+	    , machine->registers[d.regb]
+	    , machine->registers[d.regc]);
+}
+
+
 static int um_priv_handler_division (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
+static void um_priv_pp_division (char * out
+				 , size_t outsize
+				 , struct um_t * machine
+				 , pp_opcode_data_t d)
+{
+  snprintf (out
+	    , outsize
+	    , "REG[0x%02X] = 0x%08X / 0x%08X"
+	    , d.rega
+	    , machine->registers[d.regb]
+	    , machine->registers[d.regc]);
+}
+
+
 static int um_priv_handler_not_and (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
+static void um_priv_pp_not_and (char * out
+				, size_t outsize
+				, struct um_t * machine
+				, pp_opcode_data_t d)
+{
+  snprintf (out
+	    , outsize
+	    , "REG[0x%02X] = ~0x%08X | ~0x%08X"
+	    , d.rega
+	    , machine->registers[d.regb]
+	    , machine->registers[d.regc]);
+}
+
 
 static int um_priv_handler_halt (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
+static void um_priv_pp_halt (char * out
+			     , size_t outsize
+			     , struct um_t * machine
+			     , pp_opcode_data_t d)
+{
+  snprintf (out
+	    , outsize
+	    , sizeof(out) / sizeof(out[0])
+	    , "HALT");
+}
+
+
 static int um_priv_handler_allocation (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
+static void um_priv_pp_allocation (char * out
+				   , size_t outsize
+				   , struct um_t * machine
+				   , pp_opcode_data_t d)
+{
+  snprintf (out
+	    , outsize
+	    , "REG[0x%02X] = ALLOCATE (0x%08X)"
+	    , d.regb
+	    , machine->registers[d.regc]);
+}
+
+
 static int um_priv_handler_abandonment (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
+static void um_priv_pp_abandonment (char * out
+				    , size_t outsize
+				    , struct um_t * machine
+				    , pp_opcode_data_t d)
+{
+  snprintf (out
+	    , outsize
+	    , "ABANDONMENT (0x%08X)"
+	    , machine->registers[d.regc]);
+}
+
+
 static int um_priv_handler_output (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
+static void um_priv_pp_output (char * out
+			       , size_t outsize
+			       , struct um_t * machine
+			       , pp_opcode_data_t d)
+{
+  snprintf (out
+	    , outsize
+	    , "OUT (0x%02X)"
+	    , machine->registers[d.regc]);
+}
+
+
 static int um_priv_handler_input (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
+static void um_priv_pp_input (char * out
+			      , size_t outsize
+			      , struct um_t * machine
+			      , pp_opcode_data_t d)
+{
+  snprintf (out
+	    , outsize
+	    , "IN"
+	    , machine->registers[d.regc]);
+}
+
+
 static int um_priv_handler_load_program (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
+static void um_priv_pp_load_program (char * out
+				     , size_t outsize
+				     , struct um_t * machine
+				     , pp_opcode_data_t d)
+{
+  snprintf (out
+	    , outsize
+	    , "LOAD-PROGRAM (0x%08X) AND IP = 0x%08X"
+	    , machine->registers[d.regb]
+	    , machine->registers[d.regc]);
+}
+
 
 static int um_priv_handler_orthography (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
+static void um_priv_pp_orthogonality (char * out
+				      , size_t outsize
+				      , struct um_t * machine
+				      , pp_opcode_data_t d)
+{
+  snprintf (out
+	    , outsize
+	    , "ORTHOGONALITY REG[0x%02X] = 0x%08X"
+	    , machine->registers[d.rega]
+	    , d.p & 0x1FFFFFF);
+}
+
+
+
 
 
 /////////////////////////
@@ -101,24 +290,82 @@ struct Operator
 {
   OperatorCodes   code;
   op_handler      handler;
+  pp_opcode_func  pp_opcode;
   
 } g_operators [] = {
-  [OP_COND_MOVE] = { .code = OP_COND_MOVE, .handler = um_priv_handler_cond_mov },
-  [OP_ARRAY_INDEX] = { .code = OP_ARRAY_INDEX, .handler = um_priv_handler_array_idx },
-  [OP_ARRAY_AMEND] = { .code = OP_ARRAY_AMEND, .handler = um_priv_handler_array_amend },
-  [OP_ADDITION] = { .code = OP_ADDITION, .handler = um_priv_handler_addition },
-  [OP_MULTIPLICATION] = { .code = OP_MULTIPLICATION, .handler = um_priv_handler_multiplication },
-  [OP_DIVISION] = { .code = OP_DIVISION, .handler = um_priv_handler_division },
-  [OP_NOT_AND] = { .code = OP_NOT_AND, .handler = um_priv_handler_not_and },
+  
+  [OP_COND_MOVE] = {
+    .code = OP_COND_MOVE
+    , .handler = um_priv_handler_cond_mov
+    , .pp_opcode = um_priv_pp_cond_mov
+  },
+  [OP_ARRAY_INDEX] = {
+    .code = OP_ARRAY_INDEX
+    , .handler = um_priv_handler_array_idx
+    , .pp_opcode = um_priv_pp_array_idx
+  },
+  [OP_ARRAY_AMEND] = {
+    .code = OP_ARRAY_AMEND
+    , .handler = um_priv_handler_array_amend
+    , .pp_opcode = um_priv_pp_array_amend
+  },
+  [OP_ADDITION] = {
+    .code = OP_ADDITION
+    , .handler = um_priv_handler_addition
+    , .pp_opcode = um_priv_pp_addition
+  },
+  [OP_MULTIPLICATION] = {
+    .code = OP_MULTIPLICATION
+    , .handler = um_priv_handler_multiplication
+    , .pp_opcode = um_priv_pp_multiplication
+  },
+  [OP_DIVISION] = {
+    .code = OP_DIVISION
+    , .handler = um_priv_handler_division
+    , .pp_opcode = um_priv_pp_division
+  },
+  [OP_NOT_AND] = {
+    .code = OP_NOT_AND
+    , .handler = um_priv_handler_not_and
+    , .pp_opcode = um_priv_pp_not_and
+  },
+  
+  [OP_HALT] = {
+    .code = OP_HALT
+    , .handler = um_priv_handler_halt
+    , .pp_opcode = um_priv_pp_halt
+  },
+  [OP_ALLOCATION] = {
+    .code = OP_ALLOCATION
+    , .handler = um_priv_handler_allocation
+    , .pp_opcode = um_priv_pp_allocation
+  },
+  [OP_ABANDONMENT] = {
+    .code = OP_ABANDONMENT
+    , .handler = um_priv_handler_abandonment
+    , .pp_opcode = um_priv_pp_abandonment
+  },
+  [OP_OUTPUT] = {
+    .code = OP_OUTPUT
+    , .handler = um_priv_handler_output
+    , .pp_opcode = um_priv_pp_output
+  },
+  [OP_INPUT] = {
+    .code = OP_INPUT
+    , .handler = um_priv_handler_input
+    , .pp_opcode = um_priv_pp_input
+  },
+  [OP_LOAD_PROGRAM] = {
+    .code = OP_LOAD_PROGRAM
+    , .handler = um_priv_handler_load_program
+    , .pp_opcode = um_priv_pp_load_program
+  },
 
-  [OP_HALT] = { .code = OP_HALT, .handler = um_priv_handler_halt },
-  [OP_ALLOCATION] = { .code = OP_ALLOCATION, .handler = um_priv_handler_allocation },
-  [OP_ABANDONMENT] = { .code = OP_ABANDONMENT, .handler = um_priv_handler_abandonment },
-  [OP_OUTPUT] = { .code = OP_OUTPUT, .handler = um_priv_handler_output },
-  [OP_INPUT] = { .code = OP_INPUT, .handler = um_priv_handler_input },
-  [OP_LOAD_PROGRAM] = { .code = OP_LOAD_PROGRAM, .handler = um_priv_handler_load_program },
-
-  [OP_ORTHOGRAPHY] = { .code = OP_ORTHOGRAPHY, .handler = um_priv_handler_orthography },
+  [OP_ORTHOGRAPHY] = {
+    .code = OP_ORTHOGRAPHY
+    , .handler = um_priv_handler_orthography
+    , .pp_opcode = um_priv_pp_orthogonality
+  },
 
 
 #if 0
@@ -196,10 +443,12 @@ static ArrayCell * um_priv_new_array_cell_from_cell (ArrayCell * cell)
 
   p->next = NULL;
   p->data = (platter_t *) malloc (cell->datasize * sizeof(platter_t));
-  memcpy ((char *) p->data, (char *) cell->data, cell->datasize * sizeof(platter_t));
+  
+  memcpy ((char *) p->data
+	  , (char *) cell->data
+	  , cell->datasize * sizeof(platter_t));
   
   p->datasize = cell->datasize;
-  p->id = um_priv_get_next_cellid ();
   
   return p;
 }
@@ -233,38 +482,40 @@ static ArrayCell * um_priv_add_array_cell (struct um_t * machine, ArrayCell * p)
   return p;
 }
 
+platter_t um_priv_swap_platter_bytes (platter_t p)
+{
+  platter_t r = 0;
+  
+  {
+    r |= (p & 0xFF) << 24;
+    r |= (p & 0xFF00) << 8;
+    r |= (p & 0xFF0000) >> 8;
+    r |= (p & 0xFF000000) >> 24;
+  }
+  
+  return r;
+}
+
 /**
  * 
- * @param a is a platter address
+ * @param a is a platter address, not byte address
  */
 static platter_t um_priv_read_platter_from (struct um_t * machine
                                             , address_t a)
 {
 #define VALIDATE_ADDRESS(address,array) if ((address) >= (array)->datasize) fail(machine)
-    
-  platter_t valueAt = 0;
-
-  // TODO validate address
+  
   ArrayCell *
     cell = um_priv_search_for_cell_id (machine, UM_PROGRAM_ARRAY_ID);
+  
   if (NULL == cell)
     {
       fail (machine);
     }
-    
+  
   VALIDATE_ADDRESS (a, cell);
-    
-  {
-    // assume little endian acrhitecture
-    platter_t v = cell->data[a];
-        
-    valueAt |= (v & 0xFF) << 24;
-    valueAt |= (v & 0xFF00) << 8;
-    valueAt |= (v & 0xFF0000) >> 8;
-    valueAt |= (v & 0xFF000000) >> 24;
-  }
-    
-  return valueAt;
+  
+  return um_priv_swap_platter_bytes (cell->data[a]);
 }
 
 static int um_priv_initialize_machine (struct um_t * machine)
@@ -301,19 +552,25 @@ static int um_priv_initialize_program_array_with (struct um_t * machine
       fail (machine);
     }
   
-  cell = um_priv_new_array_cell (size);
+  {
+    size_t number_of_platters_to_allocate = size / sizeof(platter_t);
+    
+    cell = um_priv_new_array_cell (number_of_platters_to_allocate);
+    
+    // should be the first allocation
+    if (NULL == cell || cell->id != UM_PROGRAM_ARRAY_ID)
+      {
+	fail (machine);
+      }
+    
+    assert (cell->datasize == number_of_platters_to_allocate);
+    
+    memcpy (cell->data, data, size);
+    
+    machine->arrays = cell;
+  }
   
-  // should be the first allocation
-  if (NULL == cell || cell->id != UM_PROGRAM_ARRAY_ID)
-    {
-      fail (machine);
-    }
-  
-  assert (cell->datasize == size);
-
-  memcpy (cell->data, data, cell->datasize);
-
-  machine->arrays = cell;
+  return EOK;
 }
 
 static byte decode_register_value_from_platter (platter_t p, Register r)
@@ -336,11 +593,17 @@ static void fail (struct um_t * machine)
 #include <setjmp.h>
 static jmp_buf jmp_env;
 
-static int um_priv_do_one_spin (struct um_t * machine)
+static int um_priv_do_one_spin (struct um_t * machine
+				, on_run_one_step_func f
+				)
 {
-#define VALIDATE_OPCODE(opcode) if (opcode >= (sizeof(g_operators) / sizeof(g_operators[0]))) fail (machine)
+#define VALIDATE_OPCODE(opcode)\
+  if (opcode >= (sizeof(g_operators) / sizeof(g_operators[0])))\
+    fail (machine)
   
-  platter_t op = um_priv_read_platter_from (machine, machine->ip++);
+  platter_t op = um_priv_read_platter_from (machine, machine->ip);
+  
+  machine->ip++;
   
   VALIDATE_OPCODE ( OPCODE_FROM_PLATTER(op));
   
@@ -350,6 +613,15 @@ static int um_priv_do_one_spin (struct um_t * machine)
     byte rega = decode_register_value_from_platter (op, REGISTER_A);
     byte regb = decode_register_value_from_platter (op, REGISTER_B);
     byte regc = decode_register_value_from_platter (op, REGISTER_C);
+    
+    if (NULL != f)
+      {
+	pp_opcode_data_t d = { .p = op, .rega = rega, .regb = regb, .regc = regc };
+	
+	f (machine
+	   , g_operators [OPCODE_FROM_PLATTER (op)].pp_opcode
+	   , d);
+      }
     
     g_operators [OPCODE_FROM_PLATTER (op)].handler (machine
 						    , op
@@ -370,7 +642,7 @@ static int um_priv_do_spin (struct um_t * machine)
     {
       while (1)
         {
-	  um_priv_do_one_spin (machine);
+	  um_priv_do_one_spin (machine, NULL);
 	}
     }
   else
@@ -399,14 +671,14 @@ static int um_priv_handler_cond_mov (struct um_t * machine
                                      )
 {
   VALIDATE_REGISTERS (um_priv_handler_cond_mov);
-    
+  
   {
     if (0 != machine->registers[regc])
       {
 	machine->registers[rega] = machine->registers[regb];
       }
   }
-    
+  
   return EOK;
 }
 
@@ -431,8 +703,7 @@ static int um_priv_handler_array_idx (struct um_t * machine
     
     VALIDATE_OFFSET(array_offset,cell);
     
-    // TODO validate data offset
-    machine->registers[rega] = cell->data[array_offset];
+    machine->registers[rega] = um_priv_swap_platter_bytes (cell->data[array_offset]);
   }
     
   return EOK;
@@ -450,8 +721,9 @@ static int um_priv_handler_array_amend (struct um_t * machine
   {
     platter_t array_idx = machine->registers[rega];
     platter_t array_offset = machine->registers[regb];
-        
-    ArrayCell * cell = um_priv_search_for_cell_id (machine, array_idx);
+    
+    ArrayCell *
+      cell = um_priv_search_for_cell_id (machine, array_idx);
     if (NULL == cell)
       {
 	fail (machine);
@@ -459,9 +731,9 @@ static int um_priv_handler_array_amend (struct um_t * machine
     
     VALIDATE_OFFSET(array_offset,cell);
     
-    cell->data[array_offset] = machine->registers[regc];
+    cell->data[array_offset] = um_priv_swap_platter_bytes (machine->registers[regc]);
   }
-    
+  
   return EOK;
 }
 
@@ -538,13 +810,18 @@ static int um_priv_handler_allocation (struct um_t * machine
 				       )
 {
   VALIDATE_REGISTERS (um_priv_handler_allocation);
-    
+  
   {
-    ArrayCell * cell = um_priv_new_array_cell (machine->registers[regc]);
-    memset (cell->data, 0, cell->datasize * sizeof(platter_t));
-    machine->registers[rega] = (platter_t) cell;
-  }
+    ArrayCell *
+      cell = um_priv_new_array_cell (machine->registers[regc]);
     
+    memset (cell->data, 0, cell->datasize * sizeof(platter_t));
+    
+    machine->registers[rega] = cell->id;
+    
+    um_priv_add_array_cell (machine, cell);
+  }
+  
   return EOK;
 }
 
@@ -635,17 +912,18 @@ static int um_priv_handler_load_program (struct um_t * machine
     {
       ArrayCell *
 	cell = um_priv_search_for_cell_id (machine, machine->registers[regb]);
-    
+      
       if (NULL == cell)
 	{
 	  fail (machine);
 	}
-    
+      
       {
         ArrayCell *
           newcell = um_priv_new_array_cell_from_cell (cell);
-        
-        ArrayCell * zeroc = um_priv_search_for_cell_id (machine, UM_PROGRAM_ARRAY_ID);
+	
+        ArrayCell *
+	  zeroc = um_priv_search_for_cell_id (machine, UM_PROGRAM_ARRAY_ID);
         if (NULL != zeroc)
 	  {
 	    um_priv_delete_array (zeroc);
@@ -657,7 +935,7 @@ static int um_priv_handler_load_program (struct um_t * machine
     platter_t offset = machine->registers[regc];
     machine->ip = offset;
   }
-
+  
   return EOK;
 }
 
@@ -710,7 +988,11 @@ int um_run (struct um_t * machine, byte * codex, size_t codex_size)
   return um_priv_do_spin (machine);
 }
 
-int um_run_one_step (struct um_t * machine, byte * codex, size_t codex_size)
+int um_run_one_step (struct um_t * machine
+		     , byte * codex
+		     , size_t codex_size
+		     , on_run_one_step_func on_one_step
+		     )
 {
   if ( ! machine->arrays)
     {
@@ -718,6 +1000,6 @@ int um_run_one_step (struct um_t * machine, byte * codex, size_t codex_size)
       um_priv_initialize_program_array_with (machine, codex, codex_size);
     }
   
-  return um_priv_do_one_spin (machine);
+  return um_priv_do_one_spin (machine, on_one_step);
 }
 

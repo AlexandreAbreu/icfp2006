@@ -4,28 +4,63 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <assert.h>
 
 #include "um.h"
 #include "debugger/debugger.h"
 
+#if ! defined(EOK)
+#define EOK 0
+#endif
+
 
 um_t u_machine;
 
+
 int run_debug_mode (um_t * machine, byte * data, size_t size)
 {
+  void onestep (struct um_t * machine, pp_opcode_func pp_opcode, pp_opcode_data_t d)
+  {
+    if (pp_opcode)
+      {
+        char out [128] = {0};
+	
+	pp_opcode (out, sizeof(out) / sizeof(out[0]), machine, d);
+	
+	printf ("0x%08X : %s\n", machine->ip, out);
+      }
+  }
+  
   // big GCC / C99 extension
   int next ()
   {
-    um_run_one_step (machine, data, size);
+    um_run_one_step (machine, data, size, onestep);
+    return EOK;
   }
+  
   int where ()
   {
     printf ("IP: 0x%08X\n", machine->ip);
+    return EOK;
+  }
+  
+  int registers ()
+  {
+    size_t i = 0;
+    for (i = 0; i < UM_REGISTER_COUNT; ++i)
+      {
+	assert (i < (sizeof(machine->registers) / sizeof(machine->registers[0])));
+	
+	printf ("reg[0] = 0x%08X\n", machine->registers[i]);
+      }
+    return EOK;
   }
   
   debugger_t debugger = {
     .next = next,
-    .where = where
+    .where = where,
+    .registers = registers,
   };
   
   return run_debugger (&debugger);

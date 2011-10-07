@@ -5,6 +5,7 @@ typedef struct debugger_t
 {
   int (* next) (void);
   int (* where) (void);
+  int (* registers) (void);
   
 } debugger_t;
 

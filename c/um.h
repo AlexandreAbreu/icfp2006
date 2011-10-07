@@ -40,8 +40,39 @@ typedef struct um_t
  *
  *
  */
-int um_run (struct um_t *, byte *, size_t);
-int um_run_one_step (struct um_t *, byte *, size_t);
+int um_run (struct um_t *
+	    , byte *
+	    , size_t);
+
+/**
+ * 
+ * @param on_one_step
+ */
+
+typedef struct pp_opcode_data_t
+{
+  platter_t p;
+  byte rega;
+  byte regb;
+  byte regc;
+  
+}  pp_opcode_data_t;
+
+typedef void (* pp_opcode_func) (char * out
+				 , size_t outsize
+				 , struct um_t * machine
+				 , pp_opcode_data_t d);
+
+typedef void (* on_run_one_step_func) (struct um_t * machine
+				       , pp_opcode_func pp_opcode
+				       , pp_opcode_data_t d);
+
+int um_run_one_step (struct um_t * machine
+		     , byte * codex
+		     , size_t codex_size
+		     , on_run_one_step_func f
+		     );
+
 
 #endif // UC_H
 

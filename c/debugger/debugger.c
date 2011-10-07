@@ -73,15 +73,24 @@ static int handle_command (debugger_t * debugger, const char * command)
       return EOK;
     }
   
-  if (0 == strncmp (command, "where", strlen(command)))
+  if (0 == strncmp (command, "where", strlen(command))
+      && NULL != debugger->where)
     {
       debugger->where ();
       return EOK;
     }
   
-  if (0 == strncmp (command, "next", strlen(command)))
+  if (0 == strncmp (command, "next", strlen(command))
+      && NULL != debugger->next)
     {
       debugger->next ();
+      return EOK;
+    }
+  
+  if (0 == strncmp (command, "registers", strlen(command))
+      && NULL != debugger->registers)
+    {
+      debugger->registers ();
       return EOK;
     }
   
