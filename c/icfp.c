@@ -20,6 +20,11 @@ um_t u_machine;
 
 int run_debug_mode (um_t * machine, byte * data, size_t size)
 {
+  int should_be_stopped (struct um_t * machine, platter_t instruction)
+  {
+    return 0;
+  }
+  
   void onestep (struct um_t * machine, pp_opcode_func pp_opcode, pp_opcode_data_t d)
   {
     if (pp_opcode)
@@ -37,6 +42,17 @@ int run_debug_mode (um_t * machine, byte * data, size_t size)
   {
     um_run_one_step (machine, data, size, onestep);
     return EOK;
+  }
+  
+  int peek_next ()
+  {
+    um_run_one_step (machine, data, size, onestep);
+    return EOK;
+  }
+  
+  int run_until ()
+  {
+    um_run_until (machine, data, size, onestep, should_be_stopped);
   }
   
   int where ()
@@ -61,6 +77,7 @@ int run_debug_mode (um_t * machine, byte * data, size_t size)
     .next = next,
     .where = where,
     .registers = registers,
+    .run_until = run_until
   };
   
   return run_debugger (&debugger);

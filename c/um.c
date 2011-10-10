@@ -176,8 +176,10 @@ static void um_priv_pp_not_and (char * out
 {
   snprintf (out
 	    , outsize
-	    , "REG[0x%02X] = ~0x%08X | ~0x%08X"
+	    , "REG[0x%02X] = ~REG[0x%02X] | ~REG[0x%02X] (~0x%08X | ~0x%08X)"
 	    , d.rega
+	    , d.regb
+	    , d.regc
 	    , machine->registers[d.regb]
 	    , machine->registers[d.regc]);
 }
@@ -218,7 +220,8 @@ static void um_priv_pp_abandonment (char * out
 {
   snprintf (out
 	    , outsize
-	    , "ABANDONMENT (0x%08X)"
+	    , "ABANDONMENT REG[0x%02X] (0x%08X)"
+	    , d.regc
 	    , machine->registers[d.regc]);
 }
 
@@ -272,7 +275,7 @@ static void um_priv_pp_orthogonality (char * out
   snprintf (out
 	    , outsize
 	    , "ORTHOGONALITY REG[0x%02X] = 0x%08X"
-	    , machine->registers[d.rega]
+	    , (d.p & 0x0E000000) >> 25
 	    , d.p & 0x1FFFFFF);
 }
 
@@ -469,12 +472,47 @@ static ArrayCell * um_priv_search_for_cell_id (struct um_t * machine, ArrayCellI
   return p;
 }
 
+static void um_priv_remove_array_cell (struct um_t * machine, ArrayCell * cell)
+{
+  if (NULL == machine || NULL == cell || NULL == machine->arrays)
+    {
+      return;
+    }
+  
+  {
+    ArrayCell *
+      cur = (ArrayCell *) machine->arrays;
+    
+    if (cur == cell)
+      {
+	machine->arrays = NULL;
+	return;
+      }
+    
+    while (cur != NULL)
+      {
+	if (cur->next == cell)
+	  {
+	    break;
+	  }
+	cur = cur->next;
+      }
+    
+    if (cur != NULL)
+      {
+	assert (NULL != cur->next);
+	
+	cur->next = cur->next->next;
+      }
+  }
+}
+
 static ArrayCell * um_priv_add_array_cell (struct um_t * machine, ArrayCell * p)
 {
   assert (NULL != p);
   
   {
-    ArrayCell * last = um_priv_get_last_array_cell (machine->arrays);
+    ArrayCell * last = um_priv_get_last_array_cell (machine);
     assert (NULL != last);
     last->next = p;
   }
@@ -594,7 +632,7 @@ static void fail (struct um_t * machine)
 static jmp_buf jmp_env;
 
 static int um_priv_do_one_spin (struct um_t * machine
-				, on_run_one_step_func f
+				, on_run_one_step_func onestep
 				)
 {
 #define VALIDATE_OPCODE(opcode)\
@@ -614,13 +652,13 @@ static int um_priv_do_one_spin (struct um_t * machine
     byte regb = decode_register_value_from_platter (op, REGISTER_B);
     byte regc = decode_register_value_from_platter (op, REGISTER_C);
     
-    if (NULL != f)
+    if (NULL != onestep)
       {
 	pp_opcode_data_t d = { .p = op, .rega = rega, .regb = regb, .regc = regc };
 	
-	f (machine
-	   , g_operators [OPCODE_FROM_PLATTER (op)].pp_opcode
-	   , d);
+	onestep (machine
+		 , g_operators [OPCODE_FROM_PLATTER (op)].pp_opcode
+		 , d);
       }
     
     g_operators [OPCODE_FROM_PLATTER (op)].handler (machine
@@ -844,10 +882,15 @@ static int um_priv_handler_abandonment (struct um_t * machine
       id = machine->registers[regc];
     
     ArrayCell *
-      cell = um_priv_search_for_cell_id (machine, id);
+     cell = um_priv_search_for_cell_id (machine, id);
     if (NULL == cell)
       {
-	fail (machine);
+	//fail (machine);
+      }
+    else
+      {
+	um_priv_remove_array_cell (machine, cell);
+	um_priv_delete_array (cell);
       }
   }
   
@@ -926,8 +969,13 @@ static int um_priv_handler_load_program (struct um_t * machine
 	  zeroc = um_priv_search_for_cell_id (machine, UM_PROGRAM_ARRAY_ID);
         if (NULL != zeroc)
 	  {
+	    um_priv_remove_array_cell (machine, zeroc);
 	    um_priv_delete_array (zeroc);
 	  }
+	
+	newcell->id = UM_PROGRAM_ARRAY_ID;
+	
+	um_priv_add_array_cell (machine, newcell);
       }
     }
   
@@ -1001,5 +1049,34 @@ int um_run_one_step (struct um_t * machine
     }
   
   return um_priv_do_one_spin (machine, on_one_step);
+}
+
+int um_run_until (struct um_t * machine
+		  , byte * codex
+		  , size_t codex_size
+		  , on_run_one_step_func on_run_one_step
+		  , should_be_stopped_func should_be_stopped)
+{
+  if ( ! machine->arrays)
+    {
+      um_priv_initialize_machine (machine);
+      um_priv_initialize_program_array_with (machine
+					     , codex
+					     , codex_size);
+    }
+  
+  while (1)
+    {
+      if (EOK != um_priv_do_one_spin (machine
+				      , on_run_one_step))
+	{
+	  break;
+	}
+      
+      if (should_be_stopped (machine, 0))
+	{
+	  break;
+	}
+    }
 }
 

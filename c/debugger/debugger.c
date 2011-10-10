@@ -61,6 +61,26 @@ static int debugger_console (debugger_t * debugger)
   return EOK;
 }
 
+typedef enum token_type_t
+  {
+    SYMBOL,
+    IMMEDIATE,
+    VARIABLE
+    
+  } token_type_t;
+
+typedef struct token_t
+{
+  token_type_t type;
+  
+} token_t;
+
+token_t tokenize (const char * const s)
+{
+  token_t token;
+  return token;
+}
+
 static int handle_command (debugger_t * debugger, const char * command)
 {
   if (NULL == command || NULL == debugger)
@@ -80,7 +100,9 @@ static int handle_command (debugger_t * debugger, const char * command)
       return EOK;
     }
   
-  if (0 == strncmp (command, "next", strlen(command))
+  if (
+      (0 == strncmp (command, "next", strlen(command))
+       || 0 == strncmp (command, "n", strlen(command)))
       && NULL != debugger->next)
     {
       debugger->next ();
@@ -91,6 +113,13 @@ static int handle_command (debugger_t * debugger, const char * command)
       && NULL != debugger->registers)
     {
       debugger->registers ();
+      return EOK;
+    }
+  
+  if (0 == strncmp (command, "run-until", strlen(command))
+      && NULL != debugger->run_until)
+    {
+      debugger->run_until ();
       return EOK;
     }
   

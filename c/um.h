@@ -73,6 +73,14 @@ int um_run_one_step (struct um_t * machine
 		     , on_run_one_step_func f
 		     );
 
+typedef int (* should_be_stopped_func) (struct um_t * machine
+					, platter_t instruction);
+
+int um_run_until (struct um_t * machine
+		  , byte * codex
+		  , size_t codex_size
+		  , on_run_one_step_func onestep
+		  , should_be_stopped_func should_be_stopped);
 
 #endif // UC_H
 
