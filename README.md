@@ -1,7 +1,7 @@
 This are some experiments based on the ICFP 2006 competition.
 
-See [http://www.boundvariable.org/] http://www.boundvariable.org/ for more
-information (and a paper about the goals of the competition).
+See http://www.boundvariable.org/ for more information (and a paper about
+the goals of the competition).
 
 Nothing fancy there, mostly a simple implementation of a VM with some
 interestig properties.
