@@ -14,13 +14,17 @@ to it. The VM can be run from within the debugger by adding the parameter "-d"
 to the command line.
 
 What the debugger allowed me to play with (very simple stuff):
-     * parser / <b>stack based interpreter</b> for the debugger command line. It runs a simple
+
+* parser / <b>stack based interpreter</b> for the debugger command line. It runs a simple
      VM also that interprets the command. The command is manually parser through
      a simple <b>recursive descent parser</b> (bad one), and the opcode stack is built
      through a simple <b>post-order traversal of the parse tree</d>
-     * <b>buddy memory</b> allocator (http://en.wikipedia.org/wiki/Buddy_memory_allocation)
-     * simple garbage collector
-     * <b>Schorr / Waite</b> tree traversal
+
+* <b>buddy memory</b> allocator (http://en.wikipedia.org/wiki/Buddy_memory_allocation)
+
+* simple garbage collector
+
+* <b>Schorr / Waite</b> tree traversal
 
 Everything is pretty naive. It is not rocket science (yet to come).
 
