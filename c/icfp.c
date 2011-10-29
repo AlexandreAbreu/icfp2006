@@ -8,6 +8,7 @@
 #include <assert.h>
 
 #include "um.h"
+#include "debugger/parser.h"
 #include "debugger/debugger.h"
 
 #if ! defined(EOK)
@@ -20,9 +21,34 @@ um_t u_machine;
 
 int run_debug_mode (um_t * machine, byte * data, size_t size)
 {
-  int should_be_stopped (struct um_t * machine, platter_t instruction)
+  int should_be_stopped (struct um_t * machine, platter_t instruction, void * arguments)
   {
-    return 0;
+    int value_from_symbol_name (const char * name)
+    {
+      // static list of symbols
+      if (0 == strncasecmp (name, "IP", strlen(name)))
+	{
+	  return machine->ip;
+	}
+      
+      return -1;
+    }
+    
+    // try to parse
+    environment_t
+      env = {
+      .get_symbol_value = value_from_symbol_name
+    };
+    
+    int result = execute_command ((const char *) arguments, env);
+    
+    if (result < 0)
+      {
+	printf ("Could not properly parse: %s\n", arguments);
+	return 1;
+      }
+    
+    return result;
   }
   
   void onestep (struct um_t * machine, pp_opcode_func pp_opcode, pp_opcode_data_t d)
@@ -50,9 +76,9 @@ int run_debug_mode (um_t * machine, byte * data, size_t size)
     return EOK;
   }
   
-  int run_until ()
+  int run_until (const char * const arguments)
   {
-    um_run_until (machine, data, size, onestep, should_be_stopped);
+    um_run_until (machine, data, size, onestep, should_be_stopped, arguments);
   }
   
   int where ()

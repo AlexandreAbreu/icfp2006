@@ -12,7 +12,7 @@ typedef struct debugger_t
   int (* next) (void);
   int (* where) (void);
   int (* registers) (void);
-  int (* run_until) (void);
+  int (* run_until) (const char * const arguments);
   
   instruction_t * instructions;
   

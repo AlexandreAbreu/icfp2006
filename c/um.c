@@ -289,7 +289,7 @@ static void um_priv_pp_orthogonality (char * out
 
 typedef int (* op_handler) (struct um_t * machine, platter_t p, byte rega, byte regb, byte regc);
 
-struct Operator
+static struct Operator
 {
   OperatorCodes   code;
   op_handler      handler;
@@ -1055,7 +1055,8 @@ int um_run_until (struct um_t * machine
 		  , byte * codex
 		  , size_t codex_size
 		  , on_run_one_step_func on_run_one_step
-		  , should_be_stopped_func should_be_stopped)
+		  , should_be_stopped_func should_be_stopped
+		  , void * args)
 {
   if ( ! machine->arrays)
     {
@@ -1073,7 +1074,7 @@ int um_run_until (struct um_t * machine
 	  break;
 	}
       
-      if (should_be_stopped (machine, 0))
+      if (should_be_stopped (machine, 0, args))
 	{
 	  break;
 	}
